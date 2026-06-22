@@ -1,0 +1,22 @@
+{
+  "name": "RJ45_Module",
+  "version": "1.0.0",
+  "description": "A module for handling RJ45 connections",
+  "keywords": "RJ45, Ethernet, network",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/MROutake/RJ45_LIB__PlatformIO.git"
+  },
+"dependencies": [
+  {
+    "owner": "arduino-libraries",
+    "name": "Ethernet",
+    "version": "^2.0.2",
+    "frameworks": ["arduino"]
+  }
+],
+
+  "frameworks": "*",
+  "platforms": "*"
+}
