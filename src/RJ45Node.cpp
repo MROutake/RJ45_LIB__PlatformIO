@@ -156,6 +156,7 @@ bool RJ45Node::networkSetup()
 
 bool RJ45Node::tryReconnect()
 {
+    _client.stop();  // Socket freigeben bevor ein neuer geöffnet wird (W5100: max. 4 Sockets)
     if (_client.connect(_serverIp, _port)) return true;
     raiseError(ErrorSource::Network, ERR_NET_CONNECT_FAILED);
     return false;
