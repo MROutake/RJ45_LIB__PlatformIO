@@ -1,56 +1,67 @@
 #include <Arduino.h>
 #include <Ethernet.h>
-#include <CommunicationManager_H.h>
+#include <RJ45Lib.h>
 
+// ── Netzwerk ─────────────────────────────────────────────────────────────────
 EthernetClient client;
-CommunicationManager com(client);
+RJ45Node       node(client);
+CommandHandler handler(node);
 
-byte mac[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-IPAddress localIp(192, 168, 0, 50);
+byte      mac[]    = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+IPAddress localIp (192, 168, 0, 50);
 IPAddress serverIp(192, 168, 0, 10);
 
-void setup() {
-  Serial.begin(115200);
+// ── Anwendungszustand ─────────────────────────────────────────────────────────
+const uint8_t RELAY_PINS[16] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, A0, A1, A2, A3};
+uint16_t relayState = 0;
 
-  PacketLayout layout;
-  layout.header1 = 0xAA;
-  layout.header2 = 0xAA;
-
-  if (!com.begin(mac, localIp, serverIp, 5000, 10, layout)) {
-    Serial.print("Begin Fehler RJ45=");
-    Serial.print(com.get_error(0), HEX);
-    Serial.print(" MGR=");
-    Serial.println(com.get_error(2), HEX);
-  }
+void applyRelays(uint16_t mask) {
+    relayState = mask;
+    for (uint8_t i = 0; i < 16; ++i) {
+        digitalWrite(RELAY_PINS[i], (mask >> i) & 1 ? HIGH : LOW);
+    }
 }
 
-void loop() {
-  Packet packet;
+// ── Callbacks ─────────────────────────────────────────────────────────────────
+void onSetRelays(const Packet& p) {
+    applyRelays(CommandHandler::extractBitmask(p, 2));
+    handler.sendBitmask(CMD_TX_BITMASK, relayState, 2);
+}
 
-  if (com.readPacket(packet, 1000, 10)) {
-    Serial.print("CMD: ");
-    Serial.println(packet.command, HEX);
+// ── Setup ─────────────────────────────────────────────────────────────────────
+void setup() {
+    Serial.begin(115200);
 
-    Serial.print("LEN: ");
-    Serial.println(packet.length);
-
-    Serial.print("PAYLOAD: ");
-    for (size_t i = 0; i < packet.length; ++i) {
-      Serial.print(packet.payload[i], HEX);
-      Serial.print(' ');
+    for (uint8_t i = 0; i < 16; ++i) {
+        pinMode(RELAY_PINS[i], OUTPUT);
+        digitalWrite(RELAY_PINS[i], LOW);
     }
-    Serial.println();
-  }
 
-  const byte errRj45 = com.get_error(0);
-  const byte errParser = com.get_error(1);
-  const byte errMgr = com.get_error(2);
-  if (errRj45 != 0x00 || errParser != 0x00 || errMgr != 0x00) {
-    Serial.print("ERR RJ45=");
-    Serial.print(errRj45, HEX);
-    Serial.print(" PARSER=");
-    Serial.print(errParser, HEX);
-    Serial.print(" MGR=");
-    Serial.println(errMgr, HEX);
-  }
+    node.onError([](ErrorSource src, uint8_t code) {
+        Serial.print("Fehler src=");
+        Serial.print(static_cast<uint8_t>(src));
+        Serial.print(" code=0x");
+        Serial.println(code, HEX);
+    });
+
+    handler.on(CMD_RX_BITMASK, onSetRelays);
+
+    if (!node.begin(mac, localIp, serverIp, 5000, 10)) {
+        Serial.println("Verbindung fehlgeschlagen.");
+    }
+}
+
+// ── Loop ──────────────────────────────────────────────────────────────────────
+void loop() {
+    Packet p;
+    if (node.readPacket(p)) {
+        handler.dispatch(p);
+    }
+
+    // Beispiel: Messwert alle 5 Sekunden senden (ID 0x01, Wert 235 = 23.5)
+    static unsigned long lastMs = 0;
+    if (millis() - lastMs >= 5000) {
+        lastMs = millis();
+        handler.sendIdValue(CMD_TX_ID_VALUE, 0x01, 235);
+    }
 }
