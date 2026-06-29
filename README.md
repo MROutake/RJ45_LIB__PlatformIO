@@ -46,10 +46,13 @@ void loop() {
 ```
 
 ---
+
 # Ordner Struktur
 
 Directory structure:
 └── Lib_RJ45/
+    ├── docs/
+    │   └── RJ45 Lib – Verwendung.md
     ├── examples/
     │   └── non_blocking_receive/
     │       └── non_blocking_receive.ino
@@ -61,16 +64,21 @@ Directory structure:
     │   ├── Parser.h
     │   ├── RJ45Lib.h
     │   └── RJ45Node.h
-    ├── libary.json
+    ├── library.json
     ├── platformio.ini
     ├── README.md
     ├── src/
     │   ├── CommandHandler.cpp
     │   ├── ErrorHandler.cpp
-    │   ├── main.cpp
     │   ├── Parser.cpp
     │   └── RJ45Node.cpp
     └── test/
+        ├── Python_server/
+        │   └── test_server.py
+        ├── test_command_handler/
+        │   └── test_main.cpp
+        ├── test_error_handler/
+        │   └── test_main.cpp
         └── test_parser/
             └── test_main.cpp
 
